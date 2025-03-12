@@ -22,7 +22,7 @@ static const uint8_t device_descriptor[] = {
 	0x0, //Device Class
 	0x0, //Device Subclass
 	0x0, //Device Protocol  (000 = use config descriptor)
-	64, //Max packet size for EP0 (This has to be 8 because of the USB Low-Speed Standard)
+	64, //Max packet size for EP0 (This has to be 64 because of the USB Full-Speed Standard)
 	0x09, 0x12, //ID Vendor
 	0x35, 0xd0, //ID Product
 	0x03, 0x00, //ID Rev
@@ -44,6 +44,14 @@ static const uint8_t HIDAPIRepDesc[ ] =
 		HID_FEATURE        ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE ) ,
 		HID_REPORT_COUNT   ( 63 ), // For use with `hidapitester --vidpid 1209/D003 --open --read-feature 171`
 		HID_REPORT_ID      ( 0xab )
+		HID_USAGE          ( 0x01 ),
+		HID_FEATURE        ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE ) ,
+		HID_REPORT_COUNT   ( 63 ), // For configuring the setup.
+		HID_REPORT_ID      ( 0xac )
+		HID_USAGE          ( 0x01 ),
+		HID_FEATURE        ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE ) ,
+		HID_REPORT_COUNT_N   ( 510,2 ), // For receiving IQ data on host.
+		HID_REPORT_ID      ( 0xad )
 		HID_USAGE          ( 0x01 ),
 		HID_FEATURE        ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE ) ,
 	HID_COLLECTION_END,
@@ -82,7 +90,7 @@ static const uint8_t config_descriptor[ ] =
     0x22,                                                   // bDescriptorType
     sizeof(HIDAPIRepDesc), 0x00,                            // wDescriptorLength
 
-    /* Endpoint Descriptor (HIDAPI) */
+    /* Endpoint 1 Descriptor (HIDAPI) */
     0x07,                                                   // bLength
     0x05,                                                   // bDescriptorType
     0x81,                                                   // bEndpointAddress: IN Endpoint 1

@@ -36,7 +36,7 @@ static inline void DMA7FastCopyComplete() { while( DMA1_Channel7->CNTR ); }
 
 #if FUSB_USE_HPE
 // There is an issue with some registers apparently getting lost with HPE, just do it the slow way.
-void USB_LP_CAN1_RX0_IRQHandler() __attribute__((section(".text.vector_handler")))  __attribute((naked));
+void USB_LP_CAN1_RX0_IRQHandler() __attribute__((section(".text.vector_handler")))  __attribute((interrupt));
 #else
 void USB_LP_CAN1_RX0_IRQHandler() __attribute__((section(".text.vector_handler")))  __attribute((interrupt));
 #endif
@@ -66,7 +66,7 @@ static bool dcd_write_packet_memory(uint16_t dst, const void *__restrict src, ui
 	fsdev_pma_buf_t* pma_buf = PMA_BUF_AT(dst);
 	const uint8_t *src8 = src;
 
-	printf("Write PMA dest: %lx\n", pma_buf);
+	// printf("Write PMA dest: %lx\n", pma_buf);
 
 	while (n_write--) {
 	  pma_buf->value = fsdevbus_unaligned_read(src8);
@@ -245,7 +245,7 @@ static void handle_ctr_setup(uint32_t ep_id)
 		int USBD_SetupReqLen = USBDCTX.USBD_SetupReqLen    = pUSBD_SetupReqPak->wLength;
 		int USBD_SetupReqIndex = pUSBD_SetupReqPak->wIndex;
 		int USBD_IndexValue = USBDCTX.USBD_IndexValue = ( pUSBD_SetupReqPak->wIndex << 16 ) | pUSBD_SetupReqPak->wValue;
-		printf( "SETUP: %02x %02x %02d %02x %04x\n", USBD_SetupReqType, USBD_SetupReqCode, USBD_SetupReqLen, USBD_SetupReqIndex, USBD_IndexValue );
+		// printf( "SETUP: %02x %02x %02d %02x %04x\n", USBD_SetupReqType, USBD_SetupReqCode, USBD_SetupReqLen, USBD_SetupReqIndex, USBD_IndexValue );
 		len = 0;
 		uint8_t * addr_ptr = (uint8_t*)btable_get_addr(0, BTABLE_BUF_TX);
 
@@ -260,7 +260,8 @@ static void handle_ctr_setup(uint32_t ep_id)
 						if( len < 0 ) goto sendstall;
 						// Prepare endpoint 0 to receive data
 						ctx->USBD_SetupReqLen = len;
-						btable_set_rx_bufsize(0, BTABLE_BUF_RX, len);
+						btable_set_rx_bufsize(0, BTABLE_BUF_RX, len); // TODO:Should have a len check before this
+						// Tell host that we are ready to recieve data on OUT
 						ep_reg &= USBD_EPREG_MASK | EP_STAT_MASK(TUSB_DIR_OUT);
 						ep_change_status(&ep_reg, TUSB_DIR_OUT, EP_STAT_VALID);
     					ep_write(0, ep_reg);
@@ -353,7 +354,7 @@ static void handle_ctr_setup(uint32_t ep_id)
 					}
 					len = ( totalLen >= DEF_USBD_UEP0_SIZE ) ? DEF_USBD_UEP0_SIZE : totalLen;
 					// DMA7FastCopy( ctrl0buff, ctx->pCtrlPayloadPtr, len ); //memcpy( CTRL0BUFF, ctx->pCtrlPayloadPtr, len );
-					printf("Writing %d B to PA\n", len);
+					// printf("Writing %d B to PA\n", len);
 					dcd_write_packet_memory(addr_ptr, ctx->pCtrlPayloadPtr, len);
 					ctx->USBD_SetupReqLen = totalLen - len;
 					ctx->pCtrlPayloadPtr += len;
@@ -538,7 +539,7 @@ static void handle_ctr_setup(uint32_t ep_id)
 }
 
 // Handle CTR interrupt for the RX/OUT direction
-// Note: This looks to be not able to rx data more than 64bytes
+// TODO: This looks to be not able to rx data more than 64bytes
 static void handle_ctr_rx(uint32_t ep_id)
 {
 	uint32_t ep_reg = ep_read(ep_id) | USBD_CTR_TX | USBD_CTR_RX;
@@ -607,10 +608,7 @@ static void handle_ctr_rx(uint32_t ep_id)
 
 static void edpt0_open()
 {
-	// dcd_ep_alloc(0x0, TUSB_XFER_CONTROL);
-	// dcd_ep_alloc(0x80, TUSB_XFER_CONTROL);
-
-	printf("USB: ep_buf_ptr = %ld\n", ep_buf_ptr);
+	// printf("USB: ep_buf_ptr = %ld\n", ep_buf_ptr);
 
 	uint16_t pma_addr0 = dcd_pma_alloc(CFG_TUD_ENDPOINT0_SIZE);
 	uint16_t pma_addr1 = dcd_pma_alloc(CFG_TUD_ENDPOINT0_SIZE);
@@ -618,8 +616,8 @@ static void edpt0_open()
 	btable_set_addr(0, BTABLE_BUF_RX, pma_addr0);
 	btable_set_addr(0, BTABLE_BUF_TX, pma_addr1);
 
-	printf("Alloc EP0 RX buf: %d\n", pma_addr0);
-	printf("Alloc EP0 TX buf: %d\n", pma_addr1);
+	// printf("Alloc EP0 RX buf: %d\n", pma_addr0);
+	// printf("Alloc EP0 TX buf: %d\n", pma_addr1);
 
 	uint32_t ep_reg = ep_read(0) & ~USBD_EPREG_MASK; // only get toggle bits
 	ep_reg |= USB_EP_CONTROL;
@@ -653,7 +651,7 @@ static void handle_bus_reset()
 {
 	USBD->DADDR = 0u; // disable USB Function
 
-	printf("USB: Bus reset\n");
+	// printf("USB: Bus reset\n");
 
 	// Reset PMA allocation
 	ep_buf_ptr = FSDEV_BTABLE_BASE + 8 * FSDEV_EP_COUNT;	// 8bytes per entry
@@ -752,7 +750,7 @@ void USB_LP_CAN1_RX0_IRQHandler()
 
 int USBDSetup(void)
 {
-	printf("Setup USB Device\n\n");
+	// printf("Setup USB Device\n\n");
     // USBPRE[1:0] = 10: Divided by 3 (when PLLCLK=144MHz);
 	// Must be done before enabling clock to USB OTG tree.
     RCC->CFGR0 = (RCC->CFGR0 & ~(3<<22)) | (2<<22);
@@ -799,8 +797,9 @@ int USBDSetup(void)
 
 static inline uint8_t * USBD_GetEPBufferIfAvailable( int endp )
 {
-	if( USBDCTX.USBD_Endp_Busy[ endp ] ) return 0;
-	return USBDCTX.ENDPOINTS[ endp ];
+	// if( USBDCTX.USBD_Endp_Busy[ endp ] ) return 0;
+	// return USBDCTX.ENDPOINTS[ endp ];
+	return 0;
 }
 
 static inline int USBD_SendEndpoint( int endp, int len )

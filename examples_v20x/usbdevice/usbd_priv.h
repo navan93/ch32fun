@@ -184,7 +184,6 @@ static uint32_t dcd_pma_alloc(uint16_t len)
 
   ep_buf_ptr = (uint16_t)(ep_buf_ptr + aligned_len); // increment buffer pointer
 
-  printf("PMA alloc- addr: %ld, align_len: %d, ep_buf_ptr: %ld\n", addr, aligned_len, ep_buf_ptr);
   // Verify packet buffer is not overflowed
 //   TU_ASSERT(ep_buf_ptr <= FSDEV_PMA_SIZE, 0xFFFF);
 
@@ -221,7 +220,7 @@ static inline void ep_write_clear_ctr(uint32_t ep_id, tusb_dir_t dir) {
 }
 
 static inline void edpt0_prepare_setup(void) {
-	btable_set_rx_bufsize(0, BTABLE_BUF_RX, 8);
+	btable_set_rx_bufsize(0, BTABLE_BUF_RX, 64);
 }
 
 static inline bool ep_is_iso(uint32_t reg) {

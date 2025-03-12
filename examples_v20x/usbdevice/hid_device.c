@@ -8,24 +8,16 @@
 
 uint32_t USBDEBUG0, USBDEBUG1, USBDEBUG2;
 
-uint32_t count;
-
-int last = 0;
-void handle_debug_input( int numbytes, uint8_t * data )
-{
-	last = data[0];
-	count += numbytes;
-}
-
 uint8_t scratchpad[256];
 
 int HandleHidUserSetReportSetup( struct _USBState * ctx, tusb_control_request_t * req )
 {
+	puts("HandleHidUserSetReportSetup\n");
 	int id = req->wValue & 0xff;
 	if( id == 0xaa && req->wLength <= sizeof(scratchpad) )
 	{
-	//	memset( scratchpad, 0x55, sizeof(scratchpad) );
-	//	printf( "SET REPORT! %d [%02x]\n", req->wLength, scratchpad[200] );
+		memset( scratchpad, 0x55, sizeof(scratchpad) );
+		printf( "SET REPORT! %d [%02x]\n", req->wLength, scratchpad[200] );
 		ctx->pCtrlPayloadPtr = scratchpad;
 		return req->wLength;
 	}
@@ -34,29 +26,36 @@ int HandleHidUserSetReportSetup( struct _USBState * ctx, tusb_control_request_t 
 
 int HandleHidUserGetReportSetup( struct _USBState * ctx, tusb_control_request_t * req )
 {
+	puts("HandleHidUserGetReportSetup\n");
 	int id = req->wValue & 0xff;
 	if( id == 0xaa )
 	{
-		//printf( "GET REPORT! %d\n", req->wLength );
+		printf( "GET REPORT! %d\n", req->wLength );
 		ctx->pCtrlPayloadPtr = scratchpad;
 		return sizeof(scratchpad) - 1;
 	}
 	return 0;
 }
 
-void HandleHidUserReportDataOut( struct _USBState * ctx, uint8_t * data, int len )
-{
-}
-
+// Data sent to host
 int HandleHidUserReportDataIn( struct _USBState * ctx, uint8_t * data, int len )
 {
-//	printf( "IN %d %d %08x %08x\n", len, ctx->USBFS_SetupReqLen, data, FSUSBCTX.ENDPOINTS[0] );
-//	memset( data, 0xcc, len );
+	printf( "IN %d %d %08x %08x\n", len, ctx->USBD_SetupReqLen, data, USBDCTX.ENDPOINTS[0] );
+	memset( data, 0xcc, len );
+	puts("HandleHidUserReportDataIn\n");
 	return len;
+}
+
+// Data received from host
+void HandleHidUserReportDataOut( struct _USBState * ctx, uint8_t * data, int len )
+{
+	puts("HandleHidUserReportDataOut\n");
+	return;
 }
 
 void HandleHidUserReportOutComplete( struct _USBState * ctx )
 {
+	puts("HandleHidUserReportOutComplete\n");
 	return;
 }
 
